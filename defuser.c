@@ -105,11 +105,41 @@ int solve_phase_3(uint64_t challenge, char *out, size_t cap) {
 
     return write_answer(out, cap, values, count);
 }
+
+
+static uint32_t p4_walk_user(uint32_t target,
+                             uint32_t low,
+                             uint32_t high,
+                             uint32_t salt) {
+    uint32_t mid = low + (high - low) / 2u;
+
+    if (target == mid) {
+        return (mid + 0x80u) ^ salt;
+    }
+
+    uint32_t mixed = mid + salt;
+
+    if (target < mid) {
+        uint32_t recursive =
+            p4_walk_user(target, low, mid - 1u, salt);
+        return (5u * recursive) ^ mixed ^ 0x1bu;
+    } else {
+        uint32_t recursive =
+            p4_walk_user(target, mid + 1u, high, salt);
+        return (5u * recursive) ^ mixed ^ 1u;
+    }
+}
 int solve_phase_4(uint64_t challenge, char *out, size_t cap) {
     uint32_t values[MAX_FIELDS] = {0};
     size_t count = 0;
-    (void)challenge;
-    // TODO: 根据 phase_04 的汇编，用 challenge 算出口令中的各个整数，依次存入 values，并把 count 改为整数个数。
+
+    uint32_t target = (uint32_t)challenge & 0x7fu;
+    uint32_t salt = (uint32_t)((challenge >> 7) ^
+                               (challenge >> 32));
+
+    values[0] = p4_walk_user(target, 0u, 127u, salt);
+    count = 1;
+
     return write_answer(out, cap, values, count);
 }
 
